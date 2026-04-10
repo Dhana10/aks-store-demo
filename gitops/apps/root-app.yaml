@@ -13,7 +13,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/Azure-Samples/aks-store-demo
+    repoURL: https://github.com/Dhana10/aks-store-demo
     targetRevision: main
     path: gitops/apps
   destination:

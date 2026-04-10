@@ -9,7 +9,7 @@ using '../bicep/main.bicep'
 param currentUserObjectId = 'c73aea21-f7b0-441d-b0ea-4b855bc50a29'
 
 // ── Location ──────────────────────────────────────────────────────────────────
-param location = 'eastus'
+param location = 'eastus2'
 
 // ── Naming ────────────────────────────────────────────────────────────────────
 // 3–10 chars; becomes prefix for all resource names
