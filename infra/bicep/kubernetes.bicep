@@ -18,7 +18,7 @@ module managedCluster 'br/public:avm/res/container-service/managed-cluster:0.9.0
     name: 'aks-${nameSuffix}'
     primaryAgentPoolProfiles: [
       {
-        count: 3
+        count: 2
         mode: 'System'
         name: 'system'
         vmSize: vmSku
