@@ -13,13 +13,13 @@ param aksClusterName string
 param acrName string
 
 @description('Kubernetes version')
-param kubernetesVersion string = '1.29.2'
+param kubernetesVersion string = '1.34.4'
 
 @description('System node pool VM size')
-param systemNodeVmSize string = 'Standard_DS2_v2'
+param systemNodeVmSize string = 'Standard_D2_v3'
 
 @description('User node pool VM size — Karpenter will manage additional nodes')
-param userNodeVmSize string = 'Standard_D4s_v3'
+param userNodeVmSize string = 'Standard_D2_v3'
 
 @description('Key Vault name (globally unique)')
 param keyVaultName string
@@ -106,7 +106,7 @@ resource aksCluster 'Microsoft.ContainerService/managedClusters@2024-01-01' = {
     agentPoolProfiles: [
       {
         name: 'system'
-        count: 2
+        count: 1
         vmSize: systemNodeVmSize
         osType: 'Linux'
         mode: 'System'
