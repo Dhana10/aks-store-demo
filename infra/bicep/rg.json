@@ -1,0 +1,58 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "14824261721515954075"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "minLength": 1,
+      "metadata": {
+        "description": "Azure region for the resource group"
+      }
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 90,
+      "metadata": {
+        "description": "Resource group name"
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Tags to apply to the resource group and all child resources"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/resourceGroups",
+      "apiVersion": "2023-07-01",
+      "name": "[parameters('name')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]"
+    }
+  ],
+  "outputs": {
+    "id": {
+      "type": "string",
+      "value": "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('name'))]"
+    },
+    "name": {
+      "type": "string",
+      "value": "[parameters('name')]"
+    },
+    "location": {
+      "type": "string",
+      "value": "[reference(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('name')), '2023-07-01', 'full').location]"
+    }
+  }
+}
