@@ -22,6 +22,7 @@ module managedCluster 'br/public:avm/res/container-service/managed-cluster:0.9.0
         mode: 'System'
         name: 'system'
         vmSize: vmSku
+        availabilityZones: []
       }
     ]
     networkPlugin: 'azure'
