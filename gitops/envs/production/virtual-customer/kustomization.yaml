@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: pets
+resources:
+  - ../../../../kustomize/base/virtual-customer.yaml
+images:
+  - name: ghcr.io/azure-samples/aks-store-demo/virtual-customer
+    newName: ghcr.io/azure-samples/aks-store-demo/virtual-customer
+    newTag: "2.1.0"
