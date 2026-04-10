@@ -2,7 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: pets
 resources:
-  - ../../../../kustomize/base/virtual-worker.yaml
+  - virtual-worker.yaml
 images:
   - name: ghcr.io/azure-samples/aks-store-demo/virtual-worker
     newName: ghcr.io/azure-samples/aks-store-demo/virtual-worker
