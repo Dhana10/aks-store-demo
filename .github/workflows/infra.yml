@@ -4,6 +4,7 @@
 name: Infra — Deploy
 
 on:
+  workflow_dispatch:  # allow manual re-trigger (e.g. after Azure resource cleanup)
   push:
     branches: [main]
     paths:
