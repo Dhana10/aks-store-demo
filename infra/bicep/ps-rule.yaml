@@ -15,3 +15,4 @@ rule:
     - Azure.AKS.DefenderProfile # log storage not necessary for this demo
     - Azure.Deployment.SecureParameter # uniqueKeyPolicyKeys needs to be secured here https://github.com/Azure/bicep-registry-modules/blob/main/avm/res/document-db/database-account/main.bicep
     - Azure.AKS.ContainerInsights # monitoring is an option for this demo but not on by default
+    - Azure.AKS.MinNodeCount # student subscription vCPU quota allows max 2 nodes (4 vCPU)
