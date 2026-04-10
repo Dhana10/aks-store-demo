@@ -5,6 +5,7 @@ param identityPrincipalId string
 param currentIpAddress string
 param servicePrincipalId string
 param tags object
+param location string = resourceGroup().location
 
 // https://github.com/Azure/bicep-registry-modules/tree/main/avm/res/document-db/database-account
 // https://mcr.microsoft.com/v2/bicep/avm/res/document-db/database-account/tags/list
@@ -12,6 +13,13 @@ module databaseAccount 'br/public:avm/res/document-db/database-account:0.11.3' =
   name: 'databaseAccountDeployment'
   params: {
     name: 'db-${nameSuffix}'
+    locations: [
+      {
+        locationName: location
+        failoverPriority: 0
+        isZoneRedundant: false
+      }
+    ]
     minimumTlsVersion: 'Tls12'
     serverVersion: '4.2'
     capabilitiesToAdd: accountKind == 'MongoDB'
