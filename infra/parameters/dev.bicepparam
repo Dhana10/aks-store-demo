@@ -21,7 +21,7 @@ param aksNodePoolVMSize = 'Standard_D2s_v3'
 param k8sNamespace = 'store-dev'
 
 // ── Optional Azure services ────────────────────────────────────────────────────
-param deployObservabilityTools = true
+param deployObservabilityTools = false  // Azure for Students restricts Log Analytics/Grafana; use in-cluster kube-prometheus-stack instead
 param deployAzureContainerRegistry = true
 param deployAzureServiceBus = true
 param deployAzureCosmosDB = true

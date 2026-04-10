@@ -2,10 +2,8 @@
 name: CD — Deploy Infrastructure
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'infra/**'
+  # Disabled automatic trigger — superseded by infra.yml (subscription-scoped Bicep).
+  # Run manually via Actions UI if you need the old resource-group-scoped deployment.
   workflow_dispatch:
 
 permissions:
