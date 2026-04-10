@@ -1,0 +1,57 @@
+# Dev overlay — targets store-dev namespace, uses dev ACR images, Pod Security: baseline.
+# Image tags are updated automatically by cd-dev.yml GitHub Actions workflow.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: store-dev
+
+resources:
+  - ../../base
+
+# Namespace label for Pod Security Standards (baseline = dev)
+patches:
+  - target:
+      kind: Namespace
+      name: store-dev
+    patch: |
+      - op: add
+        path: /metadata/labels/pod-security.kubernetes.io~1enforce
+        value: baseline
+      - op: add
+        path: /metadata/labels/pod-security.kubernetes.io~1warn
+        value: restricted
+
+# Image overrides — tags updated by CI
+# Replace <ACR_NAME> with your Azure Container Registry name
+images:
+  - name: ghcr.io/azure-samples/aks-store-demo/order-service
+    newName: <ACR_NAME>.azurecr.io/order-service
+    newTag: latest
+  - name: ghcr.io/azure-samples/aks-store-demo/makeline-service
+    newName: <ACR_NAME>.azurecr.io/makeline-service
+    newTag: latest
+  - name: ghcr.io/azure-samples/aks-store-demo/product-service
+    newName: <ACR_NAME>.azurecr.io/product-service
+    newTag: latest
+  - name: ghcr.io/azure-samples/aks-store-demo/ai-service
+    newName: <ACR_NAME>.azurecr.io/ai-service
+    newTag: latest
+  - name: ghcr.io/azure-samples/aks-store-demo/store-front
+    newName: <ACR_NAME>.azurecr.io/store-front
+    newTag: latest
+  - name: ghcr.io/azure-samples/aks-store-demo/store-admin
+    newName: <ACR_NAME>.azurecr.io/store-admin
+    newTag: latest
+  - name: ghcr.io/azure-samples/aks-store-demo/virtual-customer
+    newName: <ACR_NAME>.azurecr.io/virtual-customer
+    newTag: latest
+  - name: ghcr.io/azure-samples/aks-store-demo/virtual-worker
+    newName: <ACR_NAME>.azurecr.io/virtual-worker
+    newTag: latest
+
+# ConfigMap patches — inject environment-specific values
+configMapGenerator: []
+
+# Common labels for all resources in dev
+commonLabels:
+  environment: dev

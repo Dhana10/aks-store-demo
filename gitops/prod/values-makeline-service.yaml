@@ -1,0 +1,5 @@
+# Image tag for makeline-service in prod.
+# Updated by .github/workflows/cd-prod.yml when a v* git tag is pushed.
+image:
+  repository: "<ACR_NAME>.azurecr.io/makeline-service"
+  tag: "2.1.0"

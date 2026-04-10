@@ -62,6 +62,155 @@ The application has the following services:
 
 ![Logical Application Architecture Diagram](assets/demo-arch-with-openai.png)
 
+---
+
+## Production-Grade Deployment (ArgoCD + Azure Service Bus + CosmosDB)
+
+This repo includes a full production deployment architecture. See [plan.md](./plan.md) for the complete architecture document.
+
+### Architecture Overview
+
+```
+GitHub → GitHub Actions (OIDC) → ACR → AKS → ArgoCD → store-dev / store-prod
+                                                     → monitoring (Prometheus + Grafana)
+
+Azure Services:
+  Azure Service Bus   (replaces RabbitMQ)
+  Azure CosmosDB      (replaces MongoDB)
+  Azure Key Vault     (all secrets — none in Git)
+  Azure Container Registry (Premium)
+  Azure Monitor + Log Analytics
+```
+
+### Prerequisites
+
+| Tool | Version |
+|------|---------|
+| Azure CLI | ≥ 2.60 |
+| kubectl | ≥ 1.30 |
+| helm | ≥ 3.14 |
+| jq | any |
+| curl | any |
+
+### Quick Start (one command)
+
+```bash
+# 1. Log in to Azure
+az login
+az account set --subscription <YOUR_SUBSCRIPTION_ID>
+
+# 2. Set required variables
+export AZURE_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+export LOCATION=eastus
+export APP_ENV=dev
+
+# 3. Edit infra/parameters/dev.bicepparam — fill in currentUserObjectId and currentIpAddress
+
+# 4. Run bootstrap (provisions infra + installs all cluster add-ons + applies ArgoCD)
+chmod +x scripts/bootstrap.sh
+./scripts/bootstrap.sh
+```
+
+The bootstrap script (~20 min total) will:
+1. Deploy all Azure infrastructure via Bicep
+2. Configure `kubectl` context
+3. Install ArgoCD, External Secrets Operator, NGINX Ingress, cert-manager, Prometheus + Grafana
+4. Apply the ArgoCD root Application (App-of-Apps pattern)
+5. Print access URLs and credentials
+
+### GitHub Actions Setup
+
+Configure these secrets in your GitHub repository:
+
+| Secret | Value |
+|--------|-------|
+| `AZURE_CLIENT_ID` | Federated credential client ID |
+| `AZURE_TENANT_ID` | Azure tenant ID |
+| `AZURE_SUBSCRIPTION_ID` | Azure subscription ID |
+| `ACR_NAME` | ACR name (without `.azurecr.io`) |
+| `DEPLOYER_OBJECT_ID` | Object ID of deployer principal |
+| `RUNNER_IP` | GitHub Actions runner IP (or `0.0.0.0/0` for public runners) |
+
+Create a GitHub **Environment** named `production` with a required reviewer for prod promotions.
+
+### CI/CD Workflow
+
+| Workflow | Trigger | What it does |
+|----------|---------|-------------|
+| `ci.yml` | PR to main (src/**) | Lint + test + docker build (no push) |
+| `cd-dev.yml` | Push to main (src/**) | Build → push ACR → update `gitops/dev/` image tags → ArgoCD syncs |
+| `cd-prod.yml` | `git tag v*` | Promote dev tags to `gitops/prod/` (requires Environment approval) |
+| `infra.yml` | Push to main (infra/**) | Bicep lint → what-if → deploy |
+
+### Directory Structure (new files)
+
+```
+plan.md                        Architecture document
+infra/
+  bicep/
+    rg.bicep                   Standalone resource group module
+    acr.bicep                  ACR Premium module
+    keyvault.bicep             Key Vault + secrets module
+    identity.bicep             Per-service managed identity module
+  parameters/
+    dev.bicepparam             Dev environment parameters
+    prod.bicepparam            Prod environment parameters
+k8s/
+  base/                        Kustomize base (all 8 services)
+    <service>/
+      deployment.yaml          Workload Identity + security context + probes
+      service.yaml             ClusterIP
+      configmap.yaml           Non-secret env vars
+      externalsecret.yaml      Key Vault secrets via ESO
+      hpa.yaml                 HorizontalPodAutoscaler
+      pdb.yaml                 PodDisruptionBudget
+      networkpolicy.yaml       Calico/Cilium network policy
+  overlays/
+    dev/                       store-dev namespace, baseline PSS
+    prod/                      store-prod namespace, restricted PSS
+gitops/
+  apps/
+    root-app.yaml              ArgoCD App-of-Apps root
+    dev/                       Per-service ArgoCD Applications (dev)
+    prod/                      Per-service ArgoCD Applications (prod)
+  dev/                         Image tag files (updated by cd-dev.yml)
+  prod/                        Image tag files (updated by cd-prod.yml)
+.github/workflows/
+  ci.yml                       PR: lint + test + build
+  cd-dev.yml                   Push main: build + push + gitops update
+  cd-prod.yml                  Tag v*: promote dev→prod
+  infra.yml                    infra/ changes: Bicep deploy
+scripts/
+  bootstrap.sh                 One-shot cluster setup
+```
+
+### Adding OpenAI (after bootstrap)
+
+```bash
+# Add the key manually — never commit it
+az keyvault secret set \
+  --vault-name <KV_NAME> \
+  --name openai-api-key \
+  --value <YOUR_OPENAI_KEY>
+```
+
+Then update `k8s/base/ai-service/configmap.yaml`:
+```yaml
+AZURE_OPENAI_ENDPOINT: "https://<your-aoai>.openai.azure.com/"
+AZURE_OPENAI_DEPLOYMENT_NAME: "gpt-4o-mini"
+```
+
+### Observability
+
+| Tool | Access |
+|------|--------|
+| ArgoCD UI | `kubectl port-forward svc/argocd-server -n argocd 8080:443` |
+| Grafana | `kubectl port-forward svc/kube-prometheus-stack-grafana -n monitoring 3000:80` |
+| Azure Monitor | Azure Portal → Log Analytics workspace |
+| Application Insights | Azure Portal → Application Insights (per service) |
+
+---
+
 ## Run the app on Azure Kubernetes Service (AKS)
 
 To learn how to deploy this app on AKS, see [Quickstart: Deploy an Azure Kubernetes Service (AKS) cluster using Azure CLI](https://learn.microsoft.com/azure/aks/learn/quick-kubernetes-deploy-cli).

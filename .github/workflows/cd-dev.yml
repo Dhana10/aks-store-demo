@@ -1,0 +1,91 @@
+# CD Dev — triggered on push to main when src/ changes.
+# Builds each service, pushes to ACR, updates image tags in gitops/dev/.
+# ArgoCD detects the tag change and syncs store-dev namespace automatically.
+name: CD — Dev
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - '.github/workflows/cd-dev.yml'
+
+permissions:
+  id-token: write   # required for OIDC Azure login
+  contents: write   # required to commit updated gitops/ image tags
+
+jobs:
+  build-push:
+    name: Build & Push ${{ matrix.service.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - name: order-service
+            context: src/order-service
+          - name: makeline-service
+            context: src/makeline-service
+          - name: product-service
+            context: src/product-service
+          - name: ai-service
+            context: src/ai-service
+          - name: store-front
+            context: src/store-front
+          - name: store-admin
+            context: src/store-admin
+          - name: virtual-customer
+            context: src/virtual-customer
+          - name: virtual-worker
+            context: src/virtual-worker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set image tag
+        id: tag
+        run: echo "TAG=sha-${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: ACR login
+        run: az acr login --name ${{ secrets.ACR_NAME }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & push ${{ matrix.service.name }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.service.context }}
+          push: true
+          tags: |
+            ${{ secrets.ACR_NAME }}.azurecr.io/${{ matrix.service.name }}:${{ steps.tag.outputs.TAG }}
+            ${{ secrets.ACR_NAME }}.azurecr.io/${{ matrix.service.name }}:latest
+          cache-from: type=registry,ref=${{ secrets.ACR_NAME }}.azurecr.io/${{ matrix.service.name }}:cache
+          cache-to: type=registry,ref=${{ secrets.ACR_NAME }}.azurecr.io/${{ matrix.service.name }}:cache,mode=max
+
+      - name: Update dev image tag in gitops
+        run: |
+          VALUES_FILE="gitops/dev/values-${{ matrix.service.name }}.yaml"
+          # Update kustomize overlay image tag
+          KFILE="k8s/overlays/dev/kustomization.yaml"
+          # Use yq or sed to update the image tag for this service
+          sed -i "s|newName: ${{ secrets.ACR_NAME }}.azurecr.io/${{ matrix.service.name }}|newName: ${{ secrets.ACR_NAME }}.azurecr.io/${{ matrix.service.name }}|g" "$KFILE"
+          sed -i "/name: ghcr.io\/azure-samples\/aks-store-demo\/${{ matrix.service.name }}/,/newTag:/ s|newTag: .*|newTag: ${{ steps.tag.outputs.TAG }}|" "$KFILE"
+          # Update values file
+          sed -i "s|  tag: .*|  tag: \"${{ steps.tag.outputs.TAG }}\"|" "$VALUES_FILE"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add "$KFILE" "$VALUES_FILE"
+          git diff --staged --quiet || git commit -m "ci(dev): update ${{ matrix.service.name }} to ${{ steps.tag.outputs.TAG }} [skip ci]"
+
+      - name: Push gitops changes
+        run: git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

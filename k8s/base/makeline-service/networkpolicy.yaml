@@ -1,0 +1,38 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: makeline-service
+spec:
+  podSelector:
+    matchLabels:
+      app: makeline-service
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: store-admin
+        - podSelector:
+            matchLabels:
+              app: virtual-worker
+      ports:
+        - port: 3001
+          protocol: TCP
+  egress:
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # CosmosDB HTTPS
+    - ports:
+        - port: 443
+          protocol: TCP
+    # Azure Service Bus AMQP
+    - ports:
+        - port: 5671
+          protocol: TCP
+        - port: 5672
+          protocol: TCP

@@ -1,0 +1,28 @@
+# ArgoCD App-of-Apps root Application.
+# Apply this once during bootstrap: kubectl apply -f gitops/apps/root-app.yaml -n argocd
+# It watches gitops/apps/dev/ and gitops/apps/prod/ and spawns per-service Applications.
+#
+# Replace <REPO_URL> with your GitHub repository URL.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root-app
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Azure-Samples/aks-store-demo
+    targetRevision: main
+    path: gitops/apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

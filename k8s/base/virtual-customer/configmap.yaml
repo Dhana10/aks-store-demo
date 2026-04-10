@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: virtual-customer-config
+data:
+  ORDER_SERVICE_URL: "http://order-service:3000/"
+  ORDERS_PER_HOUR: "30"

@@ -1,0 +1,44 @@
+# Allow inbound HTTP from store-front, store-admin, and virtual-customer.
+# Allow outbound to Azure Service Bus (AMQP 5671/5672) and DNS.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: order-service
+spec:
+  podSelector:
+    matchLabels:
+      app: order-service
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: store-front
+        - podSelector:
+            matchLabels:
+              app: store-admin
+        - podSelector:
+            matchLabels:
+              app: virtual-customer
+      ports:
+        - port: 3000
+          protocol: TCP
+  egress:
+    # DNS
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # Azure Service Bus AMQP (TLS)
+    - ports:
+        - port: 5671
+          protocol: TCP
+        - port: 5672
+          protocol: TCP
+    # Azure AD / OIDC token endpoint (HTTPS)
+    - ports:
+        - port: 443
+          protocol: TCP

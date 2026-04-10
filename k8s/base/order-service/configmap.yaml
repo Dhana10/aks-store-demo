@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-service-config
+data:
+  # Azure Service Bus — patched per overlay
+  AZURE_SERVICEBUS_FULLYQUALIFIEDNAMESPACE: "REPLACE_WITH_SB_NAMESPACE.servicebus.windows.net"
+  ORDER_QUEUE_NAME: "orders"
+  USE_WORKLOAD_IDENTITY_AUTH: "true"
+  FASTIFY_ADDRESS: "0.0.0.0"
+  ORDER_QUEUE_RECONNECT_LIMIT: "3"
+  # Application Insights — patched per overlay
+  APPLICATIONINSIGHTS_ROLE_NAME: "order-service"
+  APPINSIGHTS_CONNECTIONSTRING: "REPLACE_WITH_APPINSIGHTS_CONN_STR"

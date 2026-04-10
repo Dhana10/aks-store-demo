@@ -1,0 +1,5 @@
+# Image tag for order-service in dev.
+# Updated automatically by .github/workflows/cd-dev.yml on every push to main.
+image:
+  repository: "<ACR_NAME>.azurecr.io/order-service"
+  tag: "2.1.0"

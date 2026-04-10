@@ -1,0 +1,81 @@
+# CD Prod — triggered by a git tag matching v*.
+# Promotes image tags from gitops/dev/ → gitops/prod/.
+# Requires approval in the "production" GitHub Environment before running.
+name: CD — Prod
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag to promote (e.g., v1.2.3)'
+        required: true
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  promote:
+    name: Promote to Production
+    runs-on: ubuntu-latest
+    environment: production   # GitHub Environment — requires reviewer approval
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main  # always promote from latest main
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Promoting version: $VERSION"
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Verify images exist in ACR
+        run: |
+          for svc in order-service makeline-service product-service ai-service store-front store-admin; do
+            DEV_TAG=$(grep "tag:" "gitops/dev/values-${svc}.yaml" | awk '{print $2}' | tr -d '"')
+            echo "Verifying $svc:$DEV_TAG in ACR..."
+            az acr repository show-tags \
+              --name ${{ secrets.ACR_NAME }} \
+              --repository "$svc" \
+              --query "[?@=='$DEV_TAG']" \
+              --output tsv | grep -q "$DEV_TAG" || \
+              (echo "ERROR: $svc:$DEV_TAG not found in ACR" && exit 1)
+          done
+
+      - name: Promote dev image tags to prod
+        run: |
+          for svc in order-service makeline-service product-service ai-service store-front store-admin; do
+            DEV_TAG=$(grep "tag:" "gitops/dev/values-${svc}.yaml" | awk '{print $2}' | tr -d '"')
+            echo "Promoting $svc dev tag '$DEV_TAG' to prod..."
+            sed -i "s|  tag: .*|  tag: \"$DEV_TAG\"|" "gitops/prod/values-${svc}.yaml"
+            # Also update the prod kustomize overlay image tag
+            sed -i "/name: ghcr.io\/azure-samples\/aks-store-demo\/${svc}/,/newTag:/ s|newTag: .*|newTag: $DEV_TAG|" "k8s/overlays/prod/kustomization.yaml"
+          done
+
+      - name: Commit and push prod promotion
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add gitops/prod/ k8s/overlays/prod/kustomization.yaml
+          git diff --staged --quiet || \
+            git commit -m "ci(prod): promote ${{ steps.version.outputs.VERSION }} to production [skip ci]"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

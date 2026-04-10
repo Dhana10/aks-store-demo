@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: store-admin-config
+data:
+  APPLICATIONINSIGHTS_ROLE_NAME: "store-admin"
+  APPINSIGHTS_CONNECTIONSTRING: "REPLACE_WITH_APPINSIGHTS_CONN_STR"

@@ -1,0 +1,123 @@
+# Prod overlay — targets store-prod namespace, Pod Security: restricted.
+# virtual-customer and virtual-worker are excluded (no load simulators in prod).
+# Image tags are promoted from dev by cd-prod.yml GitHub Actions workflow.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: store-prod
+
+resources:
+  - ../../base
+
+# Exclude dev-only simulators from prod
+components: []
+
+patches:
+  # Remove virtual-customer and virtual-worker deployments from prod
+  - target:
+      kind: Deployment
+      name: virtual-customer
+    patch: |
+      $patch: delete
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: virtual-customer
+  - target:
+      kind: Deployment
+      name: virtual-worker
+    patch: |
+      $patch: delete
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: virtual-worker
+  - target:
+      kind: ConfigMap
+      name: virtual-customer-config
+    patch: |
+      $patch: delete
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: virtual-customer-config
+  - target:
+      kind: ConfigMap
+      name: virtual-worker-config
+    patch: |
+      $patch: delete
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: virtual-worker-config
+  - target:
+      kind: NetworkPolicy
+      name: virtual-customer
+    patch: |
+      $patch: delete
+      apiVersion: networking.k8s.io/v1
+      kind: NetworkPolicy
+      metadata:
+        name: virtual-customer
+  - target:
+      kind: NetworkPolicy
+      name: virtual-worker
+    patch: |
+      $patch: delete
+      apiVersion: networking.k8s.io/v1
+      kind: NetworkPolicy
+      metadata:
+        name: virtual-worker
+  # Increase replicas for prod
+  - target:
+      kind: Deployment
+      name: order-service
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 3
+  - target:
+      kind: Deployment
+      name: makeline-service
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 3
+  - target:
+      kind: Deployment
+      name: store-front
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 3
+  - target:
+      kind: Deployment
+      name: store-admin
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 3
+
+# Image overrides — tags promoted from dev
+images:
+  - name: ghcr.io/azure-samples/aks-store-demo/order-service
+    newName: <ACR_NAME>.azurecr.io/order-service
+    newTag: latest
+  - name: ghcr.io/azure-samples/aks-store-demo/makeline-service
+    newName: <ACR_NAME>.azurecr.io/makeline-service
+    newTag: latest
+  - name: ghcr.io/azure-samples/aks-store-demo/product-service
+    newName: <ACR_NAME>.azurecr.io/product-service
+    newTag: latest
+  - name: ghcr.io/azure-samples/aks-store-demo/ai-service
+    newName: <ACR_NAME>.azurecr.io/ai-service
+    newTag: latest
+  - name: ghcr.io/azure-samples/aks-store-demo/store-front
+    newName: <ACR_NAME>.azurecr.io/store-front
+    newTag: latest
+  - name: ghcr.io/azure-samples/aks-store-demo/store-admin
+    newName: <ACR_NAME>.azurecr.io/store-admin
+    newTag: latest
+
+commonLabels:
+  environment: prod

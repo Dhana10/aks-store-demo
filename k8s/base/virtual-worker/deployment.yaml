@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: virtual-worker
+  labels:
+    app: virtual-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: virtual-worker
+  template:
+    metadata:
+      labels:
+        app: virtual-worker
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+        agentpool: user
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: virtual-worker
+          image: ghcr.io/azure-samples/aks-store-demo/virtual-worker:2.1.0
+          envFrom:
+            - configMapRef:
+                name: virtual-worker-config
+          resources:
+            requests:
+              cpu: 5m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
